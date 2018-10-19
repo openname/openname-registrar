@@ -32,6 +32,9 @@ export function makeHttpServer(config: Object) {
   } else if (config.driver === 'google-cloud') {
     const GcDriver = require('./drivers/GcDriver')
     driver = new GcDriver(config)
+  } else if (config.driver === 'ipfs') {
+    const IPFSDriver = require('./drivers/IPFSDriver')
+    driver = new IPFSDriver(config)
   } else if (config.driverClass) {
     driver = new config.driverClass(config)
   } else {

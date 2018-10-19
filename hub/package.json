@@ -18,6 +18,7 @@
     "express": "^4.15.4",
     "express-winston": "^2.4.0",
     "jsontokens": "^0.7.8",
+    "ipfs-api": "^22.1.1",
     "node-fetch": "^2.0.0",
     "winston": "^2.3.1"
   },
