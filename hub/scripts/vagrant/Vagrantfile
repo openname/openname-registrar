@@ -1,0 +1,19 @@
+API_VERSION = '2'.freeze
+
+Vagrant.configure(API_VERSION) do |config|
+  config.vm.box = 'centos/7'
+  config.vm.define 'centos7'
+
+  config.vm.provider 'virtualbox' do |vb|
+    vb.customize ['modifyvm', :id, '--memory', '256']
+  end
+
+  config.vm.synced_folder '~/.aws', '/home/vagrant/.aws', type: 'virtualbox'
+  config.vm.synced_folder '../..', '/gaia-hub', type: 'virtualbox'
+
+  # Provision box
+  config.vm.provision 'shell',
+                      privileged: false,
+                      run: 'always',
+                      path: 'setup.sh'
+end

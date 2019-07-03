@@ -1,0 +1,524 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: 'Blockstack Gaia Hub - https://github.com/blockstack/gaia/blob/master/README.md'
+Parameters:
+  FunctionName:
+    Type: String
+    Description: Hub Name
+    Default: gaia-hub
+  HubVersion:
+    Type: String
+    Description: Hub Version
+    Default: 2.5.3
+  FunctionHandlerRoot:
+    Type: String
+    Description: Function Handler
+    Default: lib/serverless/aws/index
+  FunctionRuntime:
+    Type: String
+    Description: Function Runtime
+    Default: nodejs10.x
+  FunctionMemory:
+    Type: Number
+    Description: Function Memory
+    Default: 1024
+  FunctionTimeout:
+    Type: Number
+    Description: Function Timeout
+    Default: 6
+  PublicS3KeyPrefix:
+    Type: String
+    Description: S3 Key Prefix
+    Default: gaia
+Globals:
+  Function:
+    Runtime: !Ref FunctionRuntime
+    MemorySize: !Ref FunctionMemory
+    Timeout: !Ref FunctionTimeout
+    Environment:
+      Variables:
+        GAIA_READ_URL: !Sub https://${AttachmentsBucket}.s3.amazonaws.com/
+        GAIA_BUCKET_NAME: !Ref AttachmentsBucket
+        HUB_NAME: !Ref FunctionName
+Resources:
+  AttachmentsBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: PublicRead
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            MaxAge: 3000
+  ApiGatewayRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref FunctionName
+      DefinitionBody:
+        swagger: 2.0
+        info:
+          title:
+            Ref: AWS::StackName
+        paths:
+          '/store/{any+}':
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{ "statusCode" : 200 }'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HandleRequest.Arn}/invocations
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          '/delete/{any+}':
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{ "statusCode" : 200 }'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+            delete:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HandleDelete.Arn}/invocations
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''delete'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          '/list-files/{any+}':
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{ "statusCode" : 200 }'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HandleListFiles.Arn}/invocations
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          '/revoke-all/{any+}':
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{ "statusCode" : 200 }'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+            post:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HandleAuthBump.Arn}/invocations
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+          '/hub_info':
+            options:
+              x-amazon-apigateway-integration:
+                type: mock
+                requestTemplates:
+                  application/json: '{ "statusCode" : 200 }'
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''post'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+            get:
+              x-amazon-apigateway-integration:
+                httpMethod: POST
+                type: aws_proxy
+                uri: !Sub arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${HandleHubInfo.Arn}/invocations
+                responses:
+                  default:
+                    statusCode: 200
+                    responseParameters:
+                      method.response.header.Access-Control-Allow-Headers: '''Content-Type,X-Amz-Date,Authorization,X-Api-Key'''
+                      method.response.header.Access-Control-Allow-Methods: '''get'''
+                      method.response.header.Access-Control-Allow-Origin: '''*'''
+                    responseTemplates:
+                      application/json: ''
+              responses:
+                '200':
+                  headers:
+                    Access-Control-Allow-Headers:
+                      type: string
+                    Access-Control-Allow-Methods:
+                      type: string
+                    Access-Control-Allow-Origin:
+                      type: string
+  GaiaServerName:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: !Sub /${FunctionName}/${AttachmentsBucket}/GAIA_SERVER_NAME
+      Description: 'Gaia Server Name'
+      Type: String
+      Value: !Sub ${ApiGatewayRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}
+  HandleRequestLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}-handleRequest
+  HandleDeleteLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}-handleDelete
+  HandleListFilesLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}-handleListFiles
+  HandleAuthBumpLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}-handleAuthBump
+  HandleHubInfoLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${FunctionName}-handleHubInfo
+  IamRoleLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Ref FunctionName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ssm:GetParametersByPath'
+                  - 'ssm:GetParameters'
+                  - 'ssm:GetParameter'
+                Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:parameter/*
+              - Effect: Allow
+                Action:
+                  - 'ssm:DescribeParameters'
+                Resource:
+                - !Sub arn:${AWS::Partition}:ssm:${AWS::Region}:${AWS::AccountId}:*
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleRequest:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleDelete:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleListFiles:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleAuthBump:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleHubInfo:*
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleRequest:*:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleDelete:*:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleListFiles:*:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleAuthBump:*:*
+                  - !Sub arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleHubInfo:*:*
+      Path: /
+      RoleName: !Ref FunctionName
+  HandleRequest:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${FunctionName}-handleRequest
+      Handler: !Sub ${FunctionHandlerRoot}.handleRequest
+      CodeUri:
+        Bucket: blockstack-gaia-hub
+        Key: gaia-2.5.3.zip
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /store/{any+}
+            Method: POST
+            RestApiId: !Ref ApiGatewayRestApi
+  HandleDelete:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${FunctionName}-handleDelete
+      Handler: !Sub ${FunctionHandlerRoot}.handleDelete
+      CodeUri:
+        Bucket: blockstack-gaia-hub
+        Key: gaia-2.5.3.zip
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /delete/{any+}
+            Method: DELETE
+            RestApiId: !Ref ApiGatewayRestApi
+  HandleListFiles:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${FunctionName}-handleListFiles
+      Handler: !Sub ${FunctionHandlerRoot}.handleListFiles
+      CodeUri:
+        Bucket: blockstack-gaia-hub
+        Key: gaia-2.5.3.zip
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /list-files/{any+}
+            Method: POST
+            RestApiId: !Ref ApiGatewayRestApi
+  HandleAuthBump:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${FunctionName}-handleAuthBump
+      Handler: !Sub ${FunctionHandlerRoot}.handleAuthBump
+      CodeUri:
+        Bucket: blockstack-gaia-hub
+        Key: gaia-2.5.3.zip
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /revoke-all/{any+}
+            Method: POST
+            RestApiId: !Ref ApiGatewayRestApi
+  HandleHubInfo:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: !Sub ${FunctionName}-handleHubInfo
+      Handler: !Sub ${FunctionHandlerRoot}.handleHubInfo
+      CodeUri:
+        Bucket: blockstack-gaia-hub
+        Key: gaia-2.5.3.zip
+      Role: !GetAtt IamRoleLambdaExecution.Arn
+      Events:
+        GetResource:
+          Type: Api
+          Properties:
+            Path: /hub_info
+            Method: GET
+            RestApiId: !Ref ApiGatewayRestApi
+  HandleRequestLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HandleRequest
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HandleRequest
+      Principal: apigateway.amazonaws.com
+  HandleDeleteLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HandleDelete
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HandleDelete
+      Principal: apigateway.amazonaws.com
+  HandleListFilesLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HandleListFiles
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HandleListFiles
+      Principal: apigateway.amazonaws.com
+  HandleAuthBumpLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HandleAuthBump
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HandleAuthBump
+      Principal: apigateway.amazonaws.com
+  HandleHubInfoLambdaPermission:
+    Type: 'AWS::Lambda::Permission'
+    DependsOn:
+      - HandleHubInfo
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: HandleHubInfo
+      Principal: apigateway.amazonaws.com
+Outputs:
+  ServiceEndpoint:
+    Description: URL of the service endpoint
+    Value: !Sub https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${FunctionName}
+  HubInfoURL:
+    Description: Gaia Hub Info
+    Value: !Sub https://${ApiGatewayRestApi}.execute-api.${AWS::Region}.${AWS::URLSuffix}/${FunctionName}/hub_info
+  HubVersion:
+    Description: Gaia Hub Version
+    Value: !Ref HubVersion
+  GaiaHubBucket:
+    Value: !Ref AttachmentsBucket

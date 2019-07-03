@@ -47,7 +47,7 @@ class S3Driver implements DriverModel, DriverModelTestMethods {
     }
   }
 
-  constructor (config: S3_CONFIG_TYPE) {
+  constructor (config: S3_CONFIG_TYPE, shouldCheckStorage: boolean = true) {
     if (config.awsCredentials && config.awsCredentials.endpoint) {
       this.endpoint = config.awsCredentials.endpoint
     } else {
@@ -57,7 +57,11 @@ class S3Driver implements DriverModel, DriverModelTestMethods {
     this.bucket = config.bucket
     this.pageSize = config.pageSize ? config.pageSize : 100
     this.cacheControl = config.cacheControl
-    this.initPromise = this.createIfNeeded()
+    if (shouldCheckStorage) {
+      this.initPromise = this.createIfNeeded()
+    } else {
+      this.initPromise = Promise.resolve()
+    }
   }
 
   ensureInitialized() {

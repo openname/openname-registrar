@@ -9,6 +9,12 @@ import { Readable } from 'stream'
 import { DriverModel } from './driverModel'
 import { HubConfigInterface } from './config'
 
+interface RequestHeaders {
+  contentType?: string;
+  contentLength?: string | number;
+  authorization?: string;
+}
+
 export class HubServer {
   driver: DriverModel
   proofChecker: ProofChecker
@@ -30,14 +36,14 @@ export class HubServer {
     this.authTimestampCache = new AuthTimestampCache(this.getReadURLPrefix(), driver, config.authTimestampCacheSize)
   }
 
-  async handleAuthBump(address: string, oldestValidTimestamp: number, requestHeaders: { authorization?: string }) {
+  async handleAuthBump(address: string, oldestValidTimestamp: number, requestHeaders: RequestHeaders) {
     this.validate(address, requestHeaders)
     await this.authTimestampCache.setAuthTimestamp(address, oldestValidTimestamp)
   }
 
   // throws exception on validation error
   //   otherwise returns void.
-  validate(address: string, requestHeaders: { authorization?: string }, oldestValidTokenTimestamp?: number) {
+  validate(address: string, requestHeaders: RequestHeaders, oldestValidTokenTimestamp?: number) {
     const signingAddress = validateAuthorizationHeader(requestHeaders.authorization,
                                                        this.serverName, address,
                                                        this.requireCorrectHubUrl,
@@ -51,7 +57,7 @@ export class HubServer {
 
   async handleListFiles(address: string,
                         page: string | undefined,
-                        requestHeaders: { authorization?: string }) {
+                        requestHeaders: RequestHeaders) {
     const oldestValidTokenTimestamp = await this.authTimestampCache.getAuthTimestamp(address)
     this.validate(address, requestHeaders, oldestValidTokenTimestamp)
     return await this.driver.listFiles(address, page)
@@ -67,7 +73,7 @@ export class HubServer {
 
   async handleDelete(
     address: string, path: string,
-    requestHeaders: { authorization?: string }
+    requestHeaders: RequestHeaders
   ) {
     const oldestValidTokenTimestamp = await this.authTimestampCache.getAuthTimestamp(address)
     this.validate(address, requestHeaders, oldestValidTokenTimestamp)
@@ -112,17 +118,13 @@ export class HubServer {
 
   async handleRequest(
     address: string, path: string,
-    requestHeaders: {
-      'content-type'?: string,
-      'content-length'?: string | number,
-      authorization?: string
-    },
+    requestHeaders: RequestHeaders,
     stream: Readable
   ) {
 
     const oldestValidTokenTimestamp = await this.authTimestampCache.getAuthTimestamp(address)
     this.validate(address, requestHeaders, oldestValidTokenTimestamp)
-    let contentType = requestHeaders['content-type']
+    let contentType = requestHeaders.contentType
 
     if (contentType === null || contentType === undefined) {
       contentType = 'application/octet-stream'
@@ -159,7 +161,7 @@ export class HubServer {
     const writeCommand = {
       storageTopLevel: address,
       path, stream, contentType,
-      contentLength: parseInt(<string>requestHeaders['content-length'])
+      contentLength: parseInt(<string>requestHeaders.contentLength)
     }
 
     await this.proofChecker.checkProofs(address, path, this.getReadURLPrefix())

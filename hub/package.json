@@ -24,6 +24,7 @@
     "winston": "^3.2.1"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.25",
     "@types/bitcoinjs-lib": "^4.0.0",
     "@types/cors": "^2.8.4",
     "@types/express": "^4.16.1",
@@ -41,7 +42,7 @@
     "eslint": "^5.15.1",
     "fetch-mock": "^7.3.1",
     "istanbul": "^0.4.5",
-    "nyc": "^13.3.0",
+    "nyc": "^14.1.1",
     "proxyquire": "^2.1.0",
     "source-map-support": "^0.5.10",
     "supertest": "^3.4.2",

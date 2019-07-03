@@ -1,0 +1,66 @@
+service: gaia
+provider:
+  name: aws
+  runtime: nodejs10.x
+  stackName: gaia-faas
+  apiName: gaia-faas
+  usagePlan:
+    quota:
+      limit: 500
+      offset: 0
+      period: DAY
+    throttle:
+      burstLimit: 5
+      rateLimit: 5
+custom:
+  stage: ${opt:stage, self:provider.stage}
+  region: ${opt:region, self:provider.region}
+  environment:
+    GAIA_HUB_URL: { "Fn::Join" : ["", ["https://", { "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:custom.region}.amazonaws.com/${self:custom.stage}/" ] ]  }
+    GAIA_READ_URL: { "Fn::Join" : ["", ["https://", { "Ref" : "AttachmentsBucket" }, ".s3.amazonaws.com/" ] ]  }
+    GAIA_BUCKET_NAME: { "Fn::Join" : ["", [{ "Ref" : "AttachmentsBucket" }] ]  }
+    GAIA_SERVER_NAME: { "Fn::Join" : ["", [{ "Ref" : "ApiGatewayRestApi" }, ".execute-api.${self:custom.region}.amazonaws.com"] ]  }
+
+resources:
+  - ${file(etc/serverless/aws/resources/s3-bucket.yml)}
+functions:
+  handleRequest:
+    handler: lib/serverless/aws/index.handleRequest
+    events:
+      - http:
+          path: store/{any+}
+          method: post
+          cors: true
+    environment: ${self:custom.environment}
+  handleDelete:
+    handler: lib/serverless/aws/index.handleDelete
+    events:
+      - http:
+          path: delete/{any+}
+          method: delete
+          cors: true
+    environment: ${self:custom.environment}
+  handleListFiles:
+    handler: lib/serverless/aws/index.handleListFiles
+    events:
+      - http:
+          path: list-files/{any+}
+          method: post
+          cors: true
+    environment: ${self:custom.environment}
+  handleAuthBump:
+    handler: lib/serverless/aws/index.handleAuthBump
+    events:
+      - http:
+          path: revoke-all/{any+}
+          method: post
+          cors: true
+    environment: ${self:custom.environment}
+  handleHubInfo:
+    handler: lib/serverless/aws/index.handleHubInfo
+    events:
+      - http:
+          path: hub_info
+          method: get
+          cors: true
+    environment: ${self:custom.environment}

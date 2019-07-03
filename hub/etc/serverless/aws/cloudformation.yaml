@@ -1,0 +1,989 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: 'Blockstack Gaia Hub - https://github.com/blockstack/gaia/blob/master/README.md'
+Parameters:
+  FunctionName:
+    Type: String
+    Description: Function Name
+    Default: gaia-hub
+  HubVersion:
+    Type: String
+    Description: Hub Version
+    Default: 2.0.2
+  FunctionHandlerRoot:
+    Type: String
+    Description: Function Handler
+    Default: lib/serverless/aws/index
+  FunctionRuntime:
+    Type: String
+    Description: Function Runtime
+    Default: nodejs10.x
+  FunctionMemory:
+    Type: Number
+    Description: Function Memory
+    Default: 1024
+  FunctionTimeout:
+    Type: Number
+    Description: Function Timeout
+    Default: 6
+  PublicS3Bucket:
+    Type: String
+    Description: Public S3 Bucket
+    Default: blockstack-gaia-hub
+  PublicS3KeyPrefix:
+    Type: String
+    Description: S3 Key Prefix
+    Default: gaia
+Resources:
+  HandleRequestLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - /aws/lambda/
+          - !Ref FunctionName
+          - '-handleRequest'
+  HandleDeleteLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - /aws/lambda/
+          - !Ref FunctionName
+          - '-handleDelete'
+  HandleListFilesLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - /aws/lambda/
+          - !Ref FunctionName
+          - '-handleListFiles'
+  HandleAuthBumpLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - /aws/lambda/
+          - !Ref FunctionName
+          - '-handleAuthBump'
+  HandleHubInfoLogGroup:
+    Type: 'AWS::Logs::LogGroup'
+    Properties:
+      LogGroupName: !Join
+        - ''
+        - - /aws/lambda/
+          - !Ref FunctionName
+          - '-handleHubInfo'
+  IamRoleLambdaExecution:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: !Ref FunctionName
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogStream'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleRequest:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleDelete:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleListFiles:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleAuthBump:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleHubInfo:*
+              - Effect: Allow
+                Action:
+                  - 'logs:PutLogEvents'
+                Resource:
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleRequest:*:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleDelete:*:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleListFiles:*:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleAuthBump:*:*
+                  - !Sub >-
+                    arn:${AWS::Partition}:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/${FunctionName}-handleHubInfo:*:*
+      Path: /
+      RoleName: !Ref FunctionName
+  HandleRequestLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref PublicS3Bucket
+        S3Key: !Join
+          - ''
+          - - !Ref PublicS3KeyPrefix
+            - '-'
+            - !Ref HubVersion
+            - .zip
+      FunctionName: !Join
+        - '-'
+        - - !Ref FunctionName
+          - handleRequest
+      Handler: !Join
+        - .
+        - - !Ref FunctionHandlerRoot
+          - handleRequest
+      MemorySize: !Ref FunctionMemory
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Runtime: !Ref FunctionRuntime
+      Timeout: !Ref FunctionTimeout
+      Environment:
+        Variables:
+          GAIA_HUB_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com/
+              - !Ref FunctionName
+              - /
+          GAIA_READ_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref AttachmentsBucket
+              - .s3.amazonaws.com/
+          GAIA_BUCKET_NAME: !Join
+            - ''
+            - - !Ref AttachmentsBucket
+          GAIA_SERVER_NAME: !Join
+            - ''
+            - - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com
+    DependsOn:
+      - HandleRequestLogGroup
+      - IamRoleLambdaExecution
+  HandleRequestLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref HandleRequestLambdaFunction
+      CodeSha256: f4Rg9FaSw2LRASrA6w47RK/JNFBOiaURNTO33M2uoBc=
+  HandleDeleteLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref PublicS3Bucket
+        S3Key: !Join
+          - ''
+          - - !Ref PublicS3KeyPrefix
+            - '-'
+            - !Ref HubVersion
+            - .zip
+      FunctionName: !Join
+        - '-'
+        - - !Ref FunctionName
+          - handleDelete
+      Handler: !Join
+        - .
+        - - !Ref FunctionHandlerRoot
+          - handleDelete
+      MemorySize: !Ref FunctionMemory
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Runtime: !Ref FunctionRuntime
+      Timeout: !Ref FunctionTimeout
+      Environment:
+        Variables:
+          GAIA_HUB_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com/
+              - !Ref FunctionName
+              - /
+          GAIA_READ_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref AttachmentsBucket
+              - .s3.amazonaws.com/
+          GAIA_BUCKET_NAME: !Join
+            - ''
+            - - !Ref AttachmentsBucket
+          GAIA_SERVER_NAME: !Join
+            - ''
+            - - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com
+    DependsOn:
+      - HandleDeleteLogGroup
+      - IamRoleLambdaExecution
+  HandleDeleteLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref HandleDeleteLambdaFunction
+      CodeSha256: f4Rg9FaSw2LRASrA6w47RK/JNFBOiaURNTO33M2uoBc=
+  HandleListFilesLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref PublicS3Bucket
+        S3Key: !Join
+          - ''
+          - - !Ref PublicS3KeyPrefix
+            - '-'
+            - !Ref HubVersion
+            - .zip
+      FunctionName: !Join
+        - '-'
+        - - !Ref FunctionName
+          - handleListFiles
+      Handler: !Join
+        - .
+        - - !Ref FunctionHandlerRoot
+          - handleListFiles
+      MemorySize: !Ref FunctionMemory
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Runtime: !Ref FunctionRuntime
+      Timeout: !Ref FunctionTimeout
+      Environment:
+        Variables:
+          GAIA_HUB_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com/
+              - !Ref FunctionName
+              - /
+          GAIA_READ_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref AttachmentsBucket
+              - .s3.amazonaws.com/
+          GAIA_BUCKET_NAME: !Join
+            - ''
+            - - !Ref AttachmentsBucket
+          GAIA_SERVER_NAME: !Join
+            - ''
+            - - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com
+    DependsOn:
+      - HandleListFilesLogGroup
+      - IamRoleLambdaExecution
+  HandleListFilesLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref HandleListFilesLambdaFunction
+      CodeSha256: f4Rg9FaSw2LRASrA6w47RK/JNFBOiaURNTO33M2uoBc=
+  HandleAuthBumpLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref PublicS3Bucket
+        S3Key: !Join
+          - ''
+          - - !Ref PublicS3KeyPrefix
+            - '-'
+            - !Ref HubVersion
+            - .zip
+      FunctionName: !Join
+        - '-'
+        - - !Ref FunctionName
+          - handleAuthBump
+      Handler: !Join
+        - .
+        - - !Ref FunctionHandlerRoot
+          - handleAuthBump
+      MemorySize: !Ref FunctionMemory
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Runtime: !Ref FunctionRuntime
+      Timeout: !Ref FunctionTimeout
+      Environment:
+        Variables:
+          GAIA_HUB_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com/
+              - !Ref FunctionName
+              - /
+          GAIA_READ_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref AttachmentsBucket
+              - .s3.amazonaws.com/
+          GAIA_BUCKET_NAME: !Join
+            - ''
+            - - !Ref AttachmentsBucket
+          GAIA_SERVER_NAME: !Join
+            - ''
+            - - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com
+    DependsOn:
+      - HandleAuthBumpLogGroup
+      - IamRoleLambdaExecution
+  HandleAuthBumpLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref HandleAuthBumpLambdaFunction
+      CodeSha256: f4Rg9FaSw2LRASrA6w47RK/JNFBOiaURNTO33M2uoBc=
+  HandleHubInfoLambdaFunction:
+    Type: 'AWS::Lambda::Function'
+    Properties:
+      Code:
+        S3Bucket: !Ref PublicS3Bucket
+        S3Key: !Join
+          - ''
+          - - !Ref PublicS3KeyPrefix
+            - '-'
+            - !Ref HubVersion
+            - .zip
+      FunctionName: !Join
+        - '-'
+        - - !Ref FunctionName
+          - handleHubInfo
+      Handler: !Join
+        - .
+        - - !Ref FunctionHandlerRoot
+          - handleHubInfo
+      MemorySize: !Ref FunctionMemory
+      Role: !GetAtt
+        - IamRoleLambdaExecution
+        - Arn
+      Runtime: !Ref FunctionRuntime
+      Timeout: !Ref FunctionTimeout
+      Environment:
+        Variables:
+          GAIA_HUB_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com/
+              - !Ref FunctionName
+              - /
+          GAIA_READ_URL: !Join
+            - ''
+            - - 'https://'
+              - !Ref AttachmentsBucket
+              - .s3.amazonaws.com/
+          GAIA_BUCKET_NAME: !Join
+            - ''
+            - - !Ref AttachmentsBucket
+          GAIA_SERVER_NAME: !Join
+            - ''
+            - - !Ref ApiGatewayRestApi
+              - .execute-api.us-east-1.amazonaws.com
+    DependsOn:
+      - HandleHubInfoLogGroup
+      - IamRoleLambdaExecution
+  HandleHubInfoLambdaVersion:
+    Type: 'AWS::Lambda::Version'
+    DeletionPolicy: Retain
+    Properties:
+      FunctionName: !Ref HandleHubInfoLambdaFunction
+      CodeSha256: f4Rg9FaSw2LRASrA6w47RK/JNFBOiaURNTO33M2uoBc=
+  ApiGatewayRestApi:
+    Type: 'AWS::ApiGateway::RestApi'
+    Properties:
+      Name: gaia-lambda
+      EndpointConfiguration:
+        Types:
+          - EDGE
+  ApiGatewayResourceStore:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: store
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceStoreAnyVar:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !Ref ApiGatewayResourceStore
+      PathPart: '{any+}'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceDelete:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: delete
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceDeleteAnyVar:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !Ref ApiGatewayResourceDelete
+      PathPart: '{any+}'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceListDashfiles:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: list-files
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceListDashfilesAnyVar:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !Ref ApiGatewayResourceListDashfiles
+      PathPart: '{any+}'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceRevokeDashall:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: revoke-all
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceRevokeDashallAnyVar:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !Ref ApiGatewayResourceRevokeDashall
+      PathPart: '{any+}'
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayResourceHubinfo:
+    Type: 'AWS::ApiGateway::Resource'
+    Properties:
+      ParentId: !GetAtt
+        - ApiGatewayRestApi
+        - RootResourceId
+      PathPart: hub_info
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodStoreAnyVarOptions:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          ResponseModels: {}
+      RequestParameters: {}
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{statusCode:200}'
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
+              method.response.header.Access-Control-Allow-Methods: '''OPTIONS,POST'''
+              method.response.header.Access-Control-Allow-Credentials: '''false'''
+            ResponseTemplates:
+              application/json: >-
+                #set($origin = $input.params("Origin"))
+
+                #if($origin == "") #set($origin = $input.params("origin")) #end
+
+                #if($origin.matches(".*"))
+                #set($context.responseOverride.header.Access-Control-Allow-Origin
+                = $origin) #end
+      ResourceId: !Ref ApiGatewayResourceStoreAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodDeleteAnyVarOptions:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          ResponseModels: {}
+      RequestParameters: {}
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{statusCode:200}'
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
+              method.response.header.Access-Control-Allow-Methods: '''OPTIONS,DELETE'''
+              method.response.header.Access-Control-Allow-Credentials: '''false'''
+            ResponseTemplates:
+              application/json: >-
+                #set($origin = $input.params("Origin"))
+
+                #if($origin == "") #set($origin = $input.params("origin")) #end
+
+                #if($origin.matches(".*"))
+                #set($context.responseOverride.header.Access-Control-Allow-Origin
+                = $origin) #end
+      ResourceId: !Ref ApiGatewayResourceDeleteAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodListDashfilesAnyVarOptions:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          ResponseModels: {}
+      RequestParameters: {}
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{statusCode:200}'
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
+              method.response.header.Access-Control-Allow-Methods: '''OPTIONS,POST'''
+              method.response.header.Access-Control-Allow-Credentials: '''false'''
+            ResponseTemplates:
+              application/json: >-
+                #set($origin = $input.params("Origin"))
+
+                #if($origin == "") #set($origin = $input.params("origin")) #end
+
+                #if($origin.matches(".*"))
+                #set($context.responseOverride.header.Access-Control-Allow-Origin
+                = $origin) #end
+      ResourceId: !Ref ApiGatewayResourceListDashfilesAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodRevokeDashallAnyVarOptions:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          ResponseModels: {}
+      RequestParameters: {}
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{statusCode:200}'
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
+              method.response.header.Access-Control-Allow-Methods: '''OPTIONS,POST'''
+              method.response.header.Access-Control-Allow-Credentials: '''false'''
+            ResponseTemplates:
+              application/json: >-
+                #set($origin = $input.params("Origin"))
+
+                #if($origin == "") #set($origin = $input.params("origin")) #end
+
+                #if($origin.matches(".*"))
+                #set($context.responseOverride.header.Access-Control-Allow-Origin
+                = $origin) #end
+      ResourceId: !Ref ApiGatewayResourceRevokeDashallAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodHubinfoOptions:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      MethodResponses:
+        - StatusCode: '200'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Origin: true
+            method.response.header.Access-Control-Allow-Headers: true
+            method.response.header.Access-Control-Allow-Methods: true
+            method.response.header.Access-Control-Allow-Credentials: true
+          ResponseModels: {}
+      RequestParameters: {}
+      Integration:
+        Type: MOCK
+        RequestTemplates:
+          application/json: '{statusCode:200}'
+        ContentHandling: CONVERT_TO_TEXT
+        IntegrationResponses:
+          - StatusCode: '200'
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: '''*'''
+              method.response.header.Access-Control-Allow-Headers: >-
+                'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'
+              method.response.header.Access-Control-Allow-Methods: '''OPTIONS,GET'''
+              method.response.header.Access-Control-Allow-Credentials: '''false'''
+            ResponseTemplates:
+              application/json: >-
+                #set($origin = $input.params("Origin"))
+
+                #if($origin == "") #set($origin = $input.params("origin")) #end
+
+                #if($origin.matches(".*"))
+                #set($context.responseOverride.header.Access-Control-Allow-Origin
+                = $origin) #end
+      ResourceId: !Ref ApiGatewayResourceHubinfo
+      RestApiId: !Ref ApiGatewayRestApi
+  ApiGatewayMethodStoreAnyVarPost:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: POST
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceStoreAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - HandleRequestLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+  ApiGatewayMethodDeleteAnyVarDelete:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: DELETE
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceDeleteAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - HandleDeleteLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+  ApiGatewayMethodListDashfilesAnyVarPost:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: POST
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceListDashfilesAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - HandleListFilesLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+  ApiGatewayMethodRevokeDashallAnyVarPost:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: POST
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceRevokeDashallAnyVar
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - HandleAuthBumpLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+  ApiGatewayMethodHubinfoGet:
+    Type: 'AWS::ApiGateway::Method'
+    Properties:
+      HttpMethod: GET
+      RequestParameters: {}
+      ResourceId: !Ref ApiGatewayResourceHubinfo
+      RestApiId: !Ref ApiGatewayRestApi
+      ApiKeyRequired: false
+      AuthorizationType: NONE
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:'
+            - !Ref 'AWS::Partition'
+            - ':apigateway:'
+            - !Ref 'AWS::Region'
+            - ':lambda:path/2015-03-31/functions/'
+            - !GetAtt
+              - HandleHubInfoLambdaFunction
+              - Arn
+            - /invocations
+      MethodResponses: []
+  ApiGatewayDeployment:
+    Type: 'AWS::ApiGateway::Deployment'
+    Properties:
+      RestApiId: !Ref ApiGatewayRestApi
+      StageName: !Ref FunctionName
+    DependsOn:
+      - ApiGatewayMethodStoreAnyVarOptions
+      - ApiGatewayMethodDeleteAnyVarOptions
+      - ApiGatewayMethodListDashfilesAnyVarOptions
+      - ApiGatewayMethodRevokeDashallAnyVarOptions
+      - ApiGatewayMethodHubinfoOptions
+      - ApiGatewayMethodStoreAnyVarPost
+      - ApiGatewayMethodDeleteAnyVarDelete
+      - ApiGatewayMethodListDashfilesAnyVarPost
+      - ApiGatewayMethodRevokeDashallAnyVarPost
+      - ApiGatewayMethodHubinfoGet
+  ApiGatewayUsagePlan:
+    Type: 'AWS::ApiGateway::UsagePlan'
+    DependsOn: ApiGatewayDeployment
+    Properties:
+      ApiStages:
+        - ApiId: !Ref ApiGatewayRestApi
+          Stage: !Ref FunctionName
+      Description: Usage plan for gaia hub
+      UsagePlanName: !Ref FunctionName
+      Quota:
+        Limit: 500
+        Offset: 0
+        Period: DAY
+      Throttle:
+        BurstLimit: 5
+        RateLimit: 5
+  HandleRequestLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - HandleRequestLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: !Join
+        - ''
+        - - apigateway.
+          - !Ref 'AWS::URLSuffix'
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  HandleDeleteLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - HandleDeleteLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: !Join
+        - ''
+        - - apigateway.
+          - !Ref 'AWS::URLSuffix'
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  HandleListFilesLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - HandleListFilesLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: !Join
+        - ''
+        - - apigateway.
+          - !Ref 'AWS::URLSuffix'
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  HandleAuthBumpLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - HandleAuthBumpLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: !Join
+        - ''
+        - - apigateway.
+          - !Ref 'AWS::URLSuffix'
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  HandleHubInfoLambdaPermissionApiGateway:
+    Type: 'AWS::Lambda::Permission'
+    Properties:
+      FunctionName: !GetAtt
+        - HandleHubInfoLambdaFunction
+        - Arn
+      Action: 'lambda:InvokeFunction'
+      Principal: !Join
+        - ''
+        - - apigateway.
+          - !Ref 'AWS::URLSuffix'
+      SourceArn: !Join
+        - ''
+        - - 'arn:'
+          - !Ref 'AWS::Partition'
+          - ':execute-api:'
+          - !Ref 'AWS::Region'
+          - ':'
+          - !Ref 'AWS::AccountId'
+          - ':'
+          - !Ref ApiGatewayRestApi
+          - /*/*
+  AttachmentsBucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      AccessControl: PublicRead
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins:
+              - '*'
+            AllowedHeaders:
+              - '*'
+            AllowedMethods:
+              - GET
+              - PUT
+              - POST
+              - DELETE
+              - HEAD
+            MaxAge: 3000
+Outputs:
+  LambdaHandleRequestArn:
+    Description: Lambda HandleRequest Arn
+    Value: !Ref HandleRequestLambdaVersion
+  LambdaHandleDeleteArn:
+    Description: Lambda HandleDelete Arn
+    Value: !Ref HandleListFilesLambdaVersion
+  LambdaHandleAuthBumpArn:
+    Description: Lambda HandleAuthBump Arn
+    Value: !Ref HandleAuthBumpLambdaVersion
+  LambdaHandleHubInfoArn:
+    Description: Lambda HandleHubInfo Arn
+    Value: !Ref HandleHubInfoLambdaVersion
+  ServiceEndpoint:
+    Description: URL of the service endpoint
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !Ref ApiGatewayRestApi
+        - .execute-api.
+        - !Ref 'AWS::Region'
+        - .
+        - !Ref 'AWS::URLSuffix'
+        - /
+        - !Ref FunctionName
+  HubInfoURL:
+    Description: Gaia Hub Info
+    Value: !Join
+      - ''
+      - - 'https://'
+        - !Ref ApiGatewayRestApi
+        - .execute-api.
+        - !Ref 'AWS::Region'
+        - .
+        - !Ref 'AWS::URLSuffix'
+        - /
+        - !Ref FunctionName
+        - /hub_info
+  HubVersion:
+    Description: Gaia Hub Version
+    Value: !Ref HubVersion
+  LambdaCodeFile:
+    Description: Zipfile used for Lambda
+    Value: !Join
+      - ''
+      - - !Ref PublicS3KeyPrefix
+        - '-'
+        - !Ref HubVersion
+        - .zip
+  GaiaHubBucket:
+    Value: !Ref AttachmentsBucket

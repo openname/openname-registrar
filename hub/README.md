@@ -158,3 +158,59 @@ To configure the logging set the `argsTransport` fields in the config file. Here
 ### CDN Stuff
 
 - https://docs.microsoft.com/en-us/azure/storage/blobs/storage-https-custom-domain-cdn
+
+
+## Running Gaia Hub on AWS Lambda
+
+
+### Deploying from source
+
+#### Prepare the zip
+
+The first step, after cloning this repo on your machine, is to create the image that will be uploaded on AWS S3 and loaded on AWS Lambda.
+
+Gaia relies on a few dependencies. One of them, named `tiny-secp256k1` is written in `C/C++` requires to be compiled before running.
+
+Lambda is powered by CentOS, and we'll use Vagrant for virtualizing this distribution and prepare our image.
+
+##### Install Vagrant
+
+Follow the instructions available on [vagrantup.com](https://www.vagrantup.com/downloads.html).
+
+
+##### Prepare the VM
+
+
+```bash
+$ git clone https://github.com/blockstack/gaia.git
+
+$ cd gaia/hub/scripts/vagrant
+
+$ vagrant plugin install vagrant-vbguest
+
+$ vagrant up
+
+```
+
+##### Prepare and upload the image
+
+```bash
+$ vagrant ssh
+
+$ cd /gaia-hub
+
+$ npm install
+
+$ aws configure
+
+$ serverless deploy
+
+```
+
+This last command should output the URL of your endpoints.
+
+
+### Deploying from AWS Lambda Marketplace
+
+Available soon.
+

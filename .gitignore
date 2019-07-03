@@ -70,3 +70,4 @@ target/
 tmp/gaia-disk
 */coverage/*
 /docker/packer/vars.json
+.vagrant

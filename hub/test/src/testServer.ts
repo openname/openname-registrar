@@ -176,8 +176,8 @@ export function testServer() {
       s2.push(null)
 
       return server.handleRequest(testAddrs[0], 'foo.txt',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(path => {
           t.equal(path, `http://potato.com/${testAddrs[0]}/foo.txt`)
@@ -186,7 +186,7 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'text/text')
         })
         .then(() => server.handleRequest(testAddrs[0], 'foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(path => {
           t.equal(path, `http://potato.com/${testAddrs[0]}/foo.txt`)
@@ -214,8 +214,8 @@ export function testServer() {
       s2.push(null)
 
       await server.handleRequest(testAddrs[0], 'foo.txt',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(path => {
           t.equal(path, `${mockDriver.readUrl}${testAddrs[0]}/foo.txt`)
@@ -224,7 +224,7 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'text/text')
         })
         .then(() => server.handleRequest(testAddrs[0], 'foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(path => {
           t.equal(path, `${mockDriver.readUrl}${testAddrs[0]}/foo.txt`)
@@ -258,8 +258,8 @@ export function testServer() {
         let authorization = `bearer ${authPart}`
         for (let f = 0; f < 3; f++) {
           await server.handleRequest(testAddrs[i], '/foo/bar', 
-                                    { 'content-type' : 'text/text',
-                                      'content-length': 400,
+                                    { contentType: 'text/text',
+                                      contentLength: 400,
                                       authorization }, getJunkData())
         }
       }
@@ -299,8 +299,8 @@ export function testServer() {
       // since the revocation token cannot be retrieved (or 404ed) from the driver
       // read endpoint. 
       await t.rejects(server.handleRequest(testAddrs[0], testPath,
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, getJunkData()), errors.ValidationError, 'write with auth token failing to fetch should fail')
 
     })
@@ -329,8 +329,8 @@ export function testServer() {
 
       // no revocation timestamp has been set, write request should succeed
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
 
       // revoke the auth token (setting oldest valid date into the future)
@@ -339,15 +339,15 @@ export function testServer() {
 
       // write should fail with auth token creation date older than the revocation date 
       await t.rejects(server.handleRequest(testAddrs[0], testPath,
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, getJunkData()), errors.AuthTokenTimestampValidationError, 'write with revoked auth token should fail')
 
       // simulate auth token being dropped from cache and ensure it gets re-fetched
       server.authTimestampCache.cache.reset()
       await t.rejects(server.handleRequest(testAddrs[0], testPath,
-        { 'content-type' : 'text/text',
-          'content-length': 400,
+        { contentType: 'text/text',
+          contentLength: 400,
           authorization }, getJunkData()), errors.AuthTokenTimestampValidationError, 'write with revoked auth token should fail if not in cache')
 
       // create a auth token with iat forced further into the future
@@ -356,8 +356,8 @@ export function testServer() {
     
       // request should succeed with a token iat newer than the revocation date
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
 
       // simulate auth token being dropped from cache and ensure it gets re-fetched
@@ -365,8 +365,8 @@ export function testServer() {
 
       // request should still succeed after re-fetching to populate cache
       await server.handleRequest(testAddrs[0], testPath, 
-        { 'content-type' : 'text/text',
-          'content-length': 400,
+        { contentType: 'text/text',
+          contentLength: 400,
           authorization }, getJunkData())
     })
   })
@@ -397,8 +397,8 @@ export function testServer() {
 
       // no revocation timestamp has been set, write request should succeed
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
 
       // revoke the auth token (setting oldest valid date into the future)
@@ -407,14 +407,14 @@ export function testServer() {
 
       // write should fail with auth token creation date older than the revocation date 
       await t.rejects(server.handleRequest(testAddrs[0], testPath,
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, getJunkData()), errors.AuthTokenTimestampValidationError, 'write with revoked auth token should fail')
 
       // sanity test to make sure writing to any given address still fails from a regular validation error
       await t.rejects(server.handleRequest(testAddrs[4], testPath,
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, getJunkData()), errors.ValidationError, 'write with revoked auth token should fail')
 
       // create a auth token with iat forced further into the future
@@ -423,8 +423,8 @@ export function testServer() {
     
       // request should succeed with a token iat newer than the revocation date
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
     })
   })
@@ -454,8 +454,8 @@ export function testServer() {
 
       // no revocation timestamp has been set, write request should succeed
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
 
       // attempting to bump an address other than the signer should fail
@@ -466,8 +466,8 @@ export function testServer() {
 
       // confirm that bump failed and that write still succeeds
       await server.handleRequest(testAddrs[0], testPath, 
-                                { 'content-type' : 'text/text',
-                                  'content-length': 400,
+                                { contentType: 'text/text',
+                                  contentLength: 400,
                                   authorization }, getJunkData())
     })
   })
@@ -530,12 +530,12 @@ export function testServer() {
       s4.push(null)
 
       return server.handleRequest(testAddrs[0], '/foo/bar',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(() => server.handleDelete(testAddrs[0], '/foo/bar', { authorization }))
         .then(() => server.handleRequest(testAddrs[0], 'baz/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(() => server.handleDelete(testAddrs[0], '/nope/foo.txt', { authorization }))
         .catch((e) => {
@@ -602,8 +602,8 @@ export function testServer() {
       s4.push(null)
 
       return server.handleRequest(testAddrs[0], '/foo/bar',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(path => {
           // NOTE: the double-/ is *expected*
@@ -613,7 +613,7 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'text/text')
         })
         .then(() => server.handleRequest(testAddrs[0], 'baz/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(path => {
           t.equal(path, `${mockDriver.readUrl}${testAddrs[0]}/baz/foo.txt`)
@@ -622,13 +622,13 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'application/octet-stream')
         })
         .then(() => server.handleRequest(testAddrs[0], '/nope/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s3))
         .catch((e) => {
           t.throws(() => { throw e }, errors.ValidationError, 'invalid path prefix should fail')
         })
         .then(() => server.handleRequest(testAddrs[0], '/foo/bar/nope.txt',
-                                        { 'content-length': 400,
+                                        { contentLength: 400,
                                         authorization }, s4))
         .catch((e) => {
           t.throws(() => { throw e }, errors.ValidationError, 'putFile does not allow prefixes')
@@ -691,12 +691,12 @@ export function testServer() {
       s4.push(null)
 
       return server.handleRequest(testAddrs[0], '/foo/bar',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(() => server.handleDelete(testAddrs[0], '/foo/bar', { authorization }))
         .then(() => server.handleRequest(testAddrs[0], 'baz/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(() => server.handleDelete(testAddrs[0], 'baz/foo.txt', { authorization }))
         .then(() => server.handleDelete(testAddrs[0], '/nope/foo.txt', { authorization }))
@@ -758,8 +758,8 @@ export function testServer() {
       s4.push(null)
 
       return server.handleRequest(testAddrs[0], '/foo/bar',
-                          { 'content-type' : 'text/text',
-                            'content-length': 400,
+                          { contentType: 'text/text',
+                            contentLength: 400,
                             authorization }, s)
         .then(path => {
           // NOTE: the double-/ is *expected*
@@ -769,7 +769,7 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'text/text')
         })
         .then(() => server.handleRequest(testAddrs[0], 'baz/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s2))
         .then(path => {
           t.equal(path, `${mockDriver.readUrl}${testAddrs[0]}/baz/foo.txt`)
@@ -778,13 +778,13 @@ export function testServer() {
           t.equal(mockDriver.lastWrite.contentType, 'application/octet-stream')
         })
         .then(() => server.handleRequest(testAddrs[0], '/nope/foo.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s3))
         .catch((e: any) => {
           t.throws(() => { throw e }, errors.ValidationError, 'invalid prefix should fail')
         })
         .then(() => server.handleRequest(testAddrs[0], '/foo/bar/nope.txt',
-                          { 'content-length': 400,
+                          { contentLength: 400,
                             authorization }, s4 ))
         .catch((e: any) => {
           t.throws(() => { throw e }, errors.ValidationError, 'putFile does not permit prefixes')
